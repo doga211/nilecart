@@ -2,22 +2,29 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>NileCart Super Prototype v8</title>
+<title>NileCart Super Prototype v9</title>
 <style>
-body{font-family:Arial;margin:0;background:#f2f4f7;}
-header{background:#0A4DA3;color:white;padding:15px;font-size:20px;}
-nav{background:#00AEEF;padding:10px;}
-nav button{margin:5px;padding:8px 12px;border:none;background:white;cursor:pointer;}
-.container{padding:20px;}
-.card{background:white;padding:15px;margin-bottom:10px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);}
-input,select{padding:8px;margin:5px;width:200px;}
-button.action{background:#F9A825;border:none;padding:8px 12px;cursor:pointer;}
-canvas{border:1px solid #333;background:#d0f4ff;margin-top:10px;}
-.notification{position:fixed;top:10px;right:10px;background:#F9A825;color:#000;padding:10px;border-radius:5px;box-shadow:0 2px 5px rgba(0,0,0,0.3);}
+/* ---------- GLOBAL ---------- */
+body{margin:0;font-family:Arial,sans-serif;background:#eef2f7;color:#333;}
+header{background:#0A4DA3;color:white;padding:15px;font-size:24px;text-align:center;font-weight:bold;box-shadow:0 2px 5px rgba(0,0,0,0.2);}
+nav{background:#00AEEF;padding:10px;display:flex;flex-wrap:wrap;justify-content:center;}
+nav button{margin:5px;padding:10px 15px;border:none;border-radius:5px;background:white;color:#00AEEF;font-weight:bold;cursor:pointer;transition:0.2s;}
+nav button:hover{background:#f9a825;color:#000;}
+.container{padding:20px;max-width:1200px;margin:auto;}
+.card{background:white;padding:15px;margin-bottom:15px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.15);}
+.card h3{margin-top:0;color:#0A4DA3;}
+input,select{padding:8px;margin:5px;width:200px;border-radius:5px;border:1px solid #ccc;}
+button.action{background:#F9A825;border:none;padding:8px 12px;border-radius:5px;cursor:pointer;font-weight:bold;}
+canvas{border:1px solid #333;background:#d0f4ff;margin-top:10px;border-radius:8px;}
+.notification{position:fixed;top:10px;right:10px;background:#F9A825;color:#000;padding:10px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.3);}
+h2.section-title{color:#0A4DA3;border-bottom:2px solid #00AEEF;padding-bottom:5px;margin-bottom:15px;}
+.table{width:100%;border-collapse:collapse;}
+.table th,.table td{border:1px solid #ccc;padding:8px;text-align:left;border-radius:5px;}
+.table th{background:#0A4DA3;color:white;}
 </style>
 </head>
 <body>
-<header>NileCart Super Prototype v8</header>
+<header>NileCart Super Prototype v9</header>
 <nav id="nav"></nav>
 <div class="container" id="app"></div>
 
@@ -65,7 +72,9 @@ function renderNav(){
   nav.innerHTML+=`<button onclick="showAnalytics()">Analytics</button>`;
   nav.innerHTML+=`<button onclick="showLogisticsMap()">Logistics Map</button>`;
   nav.innerHTML+=`<button onclick="showNotifications()">Notifications</button>`;
-  nav.innerHTML+=`<button onclick="createDummyData()">Generate Dummy Data</button>`;
+  if(["admin","vendor","restaurant","bus"].includes(user.role)){
+    nav.innerHTML+=`<button onclick="createDummyData()">Generate Dummy Data</button>`;
+  }
   nav.innerHTML+=`<button onclick="logout()">Logout</button>`;
 }
 
@@ -92,7 +101,43 @@ customer@nilecart.com / 1234
 function loadDashboard(){
   renderNav();
   let user=JSON.parse(localStorage.session);
-  document.getElementById("app").innerHTML=`<div class="card"><h2>Welcome ${user.name}</h2>Role: ${user.role}</div>`;
+  let html=`<div class="card"><h2>Welcome ${user.name}</h2>Role: ${user.role}</div>`;
+
+  if(user.role=="customer"){
+    html+=`
+    <div class="card">
+    <h3>My Orders</h3>
+    <table class="table"><tr><th>ID</th><th>Type</th><th>Status</th></tr>
+    ${JSON.parse(localStorage.orders).filter(o=>o.customer==user.email).map(o=>`<tr><td>${o.id}</td><td>${o.type}</td><td>${o.status||'Pending'}</td></tr>`).join('')}
+    </table>
+    </div>
+    <div class="card">
+    <h3>Book Bus Ticket</h3>
+    <select id="busSelect">${JSON.parse(localStorage.trips).map((t,i)=>`<option value="${i}">${t.route}</option>`).join('')}</select>
+    <button class="action" onclick="bookTicket()">Book</button>
+    </div>
+    `;
+  }else if(user.role=="bus"){
+    html+=`<div class="card">
+      <h3>My Trips</h3>
+      <table class="table"><tr><th>Route</th><th>Seats</th></tr>
+      ${JSON.parse(localStorage.trips).filter(t=>t.operator==user.email).map(t=>`<tr><td>${t.route}</td><td>${t.seats.join(', ')}</td></tr>`).join('')}
+      </table></div>`;
+  }
+
+  document.getElementById("app").innerHTML=html;
+}
+
+/* ---------------- BUS TICKETS ---------------- */
+function bookTicket(){
+  let user=JSON.parse(localStorage.session);
+  let index=document.getElementById("busSelect").value;
+  let trips=JSON.parse(localStorage.trips);
+  if(!trips[index].seats) trips[index].seats=[];
+  trips[index].seats.push(user.email);
+  localStorage.trips=JSON.stringify(trips);
+  addNotification(`Ticket booked for ${trips[index].route}`);
+  loadDashboard();
 }
 
 /* ---------------- NOTIFICATIONS ---------------- */
@@ -113,7 +158,7 @@ function showPopupNotification(message){
 function showNotifications(){
   let notifications=JSON.parse(localStorage.notifications);
   let user=JSON.parse(localStorage.session);
-  let html="<h2>Notifications</h2>";
+  let html="<h2 class='section-title'>Notifications</h2>";
   notifications.filter(n=>n.user==user.email).forEach(n=>{
     html+=`<div class="card">${n.time}: ${n.message}</div>`;
   });
@@ -122,55 +167,51 @@ function showNotifications(){
 
 /* ---------------- LOGISTICS MAP WITH ANIMATION ---------------- */
 function showLogisticsMap(){
-document.getElementById("app").innerHTML=`<h2>Interactive Logistics Map</h2>
-<canvas id="mapCanvas" width="800" height="400"></canvas>
+document.getElementById("app").innerHTML=`<h2 class="section-title">Interactive Logistics Map</h2>
+<canvas id="mapCanvas" width="900" height="450"></canvas>
 <p>Shipments, buses, and riders move in real-time!</p>`;
 let canvas=document.getElementById("mapCanvas");let ctx=canvas.getContext("2d");
 let shipments=JSON.parse(localStorage.shipments);
 let trips=JSON.parse(localStorage.trips);
 let riders=JSON.parse(localStorage.users).filter(u=>u.role=="rider");
-let cities={Juba:{x:100,y:200},Kampala:{x:700,y:200}};
+let cities={Juba:{x:100,y:225},Kampala:{x:800,y:225}};
 
 function drawMap(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   // Cities
-  ctx.fillStyle="#0A4DA3"; ctx.beginPath(); ctx.arc(cities.Juba.x,cities.Juba.y,15,0,2*Math.PI); ctx.fill();
-  ctx.fillText("Juba",cities.Juba.x-15,cities.Juba.y-20);
-  ctx.beginPath(); ctx.arc(cities.Kampala.x,cities.Kampala.y,15,0,2*Math.PI); ctx.fill();
-  ctx.fillText("Kampala",cities.Kampala.x-20,cities.Kampala.y-20);
+  ctx.fillStyle="#0A4DA3"; ctx.beginPath(); ctx.arc(cities.Juba.x,cities.Juba.y,18,0,2*Math.PI); ctx.fill();
+  ctx.fillText("Juba",cities.Juba.x-15,cities.Juba.y-25);
+  ctx.beginPath(); ctx.arc(cities.Kampala.x,cities.Kampala.y,18,0,2*Math.PI); ctx.fill();
+  ctx.fillText("Kampala",cities.Kampala.x-20,cities.Kampala.y-25);
 
-  // Animate Shipments
+  // Shipments
   shipments.forEach(s=>{
     if(!s.progress) s.progress=0;
     if(s.status!="Delivered") s.progress=Math.min(s.progress+0.005,1);
-    let px=cities.Juba.x + (cities.Kampala.x-cities.Juba.x)*s.progress;
+    let px=cities.Juba.x+(cities.Kampala.x-cities.Juba.x)*s.progress;
     ctx.fillStyle="orange"; ctx.beginPath(); ctx.arc(px,cities.Juba.y,10,0,2*Math.PI); ctx.fill();
     ctx.fillText(s.tracking+" "+s.status,px-30,cities.Juba.y-15);
-    s.x=px; s.y=cities.Juba.y; s.type="shipment";
     if(s.progress>=1 && s.status!="Delivered") {s.status="Delivered"; addNotification(`Shipment ${s.tracking} delivered!`);}
   });
 
-  // Animate Trips
+  // Trips
   trips.forEach(t=>{
     if(!t.progress) t.progress=0;
     t.progress=Math.min(t.progress+0.002,1);
-    let px=cities.Juba.x + (cities.Kampala.x-cities.Juba.x)*t.progress;
+    let px=cities.Juba.x+(cities.Kampala.x-cities.Juba.x)*t.progress;
     ctx.fillStyle="green"; ctx.beginPath(); ctx.arc(px,cities.Juba.y-50,10,0,2*Math.PI); ctx.fill();
     ctx.fillText("Bus: "+t.route,px-30,cities.Juba.y-65);
-    t.x=px; t.y=cities.Juba.y-50; t.type="bus";
   });
 
-  // Animate Riders
+  // Riders
   riders.forEach(r=>{
     if(!r.progress) r.progress=Math.random()*0.1;
     r.progress=(r.progress+0.004)%1;
-    let px=cities.Juba.x + (cities.Kampala.x-cities.Juba.x)*r.progress;
+    let px=cities.Juba.x+(cities.Kampala.x-cities.Juba.x)*r.progress;
     ctx.fillStyle="red"; ctx.beginPath(); ctx.arc(px,cities.Juba.y+50,10,0,2*Math.PI); ctx.fill();
     ctx.fillText(r.name,px-20,cities.Juba.y+35);
-    r.x=px; r.y=cities.Juba.y+50; r.type="rider";
   });
 }
-
 setInterval(drawMap,30);
 }
 
@@ -181,10 +222,10 @@ let shipments=JSON.parse(localStorage.shipments);
 let trips=JSON.parse(localStorage.trips);
 
 document.getElementById("app").innerHTML=`
-<h2>Analytics Dashboard</h2>
-<div class="card"><h3>Orders by Type</h3><canvas id="chartOrders" width="400" height="200"></canvas></div>
-<div class="card"><h3>Shipments by Status</h3><canvas id="chartShipments" width="400" height="200"></canvas></div>
-<div class="card"><h3>Bus Trips Status</h3><canvas id="chartTrips" width="400" height="200"></canvas></div>
+<h2 class='section-title'>Analytics Dashboard</h2>
+<div class="card"><h3>Orders by Type</h3><canvas id="chartOrders" width="450" height="200"></canvas></div>
+<div class="card"><h3>Shipments by Status</h3><canvas id="chartShipments" width="450" height="200"></canvas></div>
+<div class="card"><h3>Bus Trips Status</h3><canvas id="chartTrips" width="450" height="200"></canvas></div>
 `;
 
 function drawBarChart(canvasId,data,labels,color){
@@ -198,7 +239,7 @@ function drawBarChart(canvasId,data,labels,color){
     ctx.fillStyle=color;
     ctx.fillRect(i*(barWidth+10)+10,c.height-h-10,barWidth,h);
     ctx.fillStyle="#000";
-    ctx.fillText(labels[i]+"("+v+")",i*(barWidth+10)+10,c.height-10);
+    ctx.fillText(labels[i]+"("+v+")",i*(barWidth+10)+c.height-10,c.height-10);
   });
 }
 
@@ -218,9 +259,10 @@ drawBarChart("chartTrips",tripData,tripLabels,"#00AEEF");
 /* ---------------- DUMMY DATA CREATOR ---------------- */
 function createDummyData(){
   let orders=JSON.parse(localStorage.orders);
-  orders.push({id:Date.now(),type:"product"}); 
-  orders.push({id:Date.now()+1,type:"food"}); 
-  orders.push({id:Date.now()+2,type:"ticket"});
+  let user=JSON.parse(localStorage.session);
+  orders.push({id:Date.now(),type:"product",customer:user.email}); 
+  orders.push({id:Date.now()+1,type:"food",customer:user.email}); 
+  orders.push({id:Date.now()+2,type:"ticket",customer:user.email});
   localStorage.orders=JSON.stringify(orders);
 
   let shipments=JSON.parse(localStorage.shipments);
@@ -229,8 +271,8 @@ function createDummyData(){
   localStorage.shipments=JSON.stringify(shipments);
 
   let trips=JSON.parse(localStorage.trips);
-  trips.push({route:"Juba→Kampala",seats:[1,2,3],progress:0});
-  trips.push({route:"Juba→Kampala",seats:[1,2],progress:0.1});
+  trips.push({route:"Juba→Kampala",seats:[],operator:user.email,progress:0});
+  trips.push({route:"Juba→Kampala",seats:[],operator:user.email,progress:0.1});
   localStorage.trips=JSON.stringify(trips);
 
   addNotification("Dummy data added!");
