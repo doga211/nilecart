@@ -2,285 +2,589 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>NileCart Super Prototype v9</title>
+<title>NileCart Super Platform v11</title>
+
 <style>
-/* ---------- GLOBAL ---------- */
-body{margin:0;font-family:Arial,sans-serif;background:#eef2f7;color:#333;}
-header{background:#0A4DA3;color:white;padding:15px;font-size:24px;text-align:center;font-weight:bold;box-shadow:0 2px 5px rgba(0,0,0,0.2);}
-nav{background:#00AEEF;padding:10px;display:flex;flex-wrap:wrap;justify-content:center;}
-nav button{margin:5px;padding:10px 15px;border:none;border-radius:5px;background:white;color:#00AEEF;font-weight:bold;cursor:pointer;transition:0.2s;}
-nav button:hover{background:#f9a825;color:#000;}
-.container{padding:20px;max-width:1200px;margin:auto;}
-.card{background:white;padding:15px;margin-bottom:15px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.15);}
-.card h3{margin-top:0;color:#0A4DA3;}
-input,select{padding:8px;margin:5px;width:200px;border-radius:5px;border:1px solid #ccc;}
-button.action{background:#F9A825;border:none;padding:8px 12px;border-radius:5px;cursor:pointer;font-weight:bold;}
-canvas{border:1px solid #333;background:#d0f4ff;margin-top:10px;border-radius:8px;}
-.notification{position:fixed;top:10px;right:10px;background:#F9A825;color:#000;padding:10px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.3);}
-h2.section-title{color:#0A4DA3;border-bottom:2px solid #00AEEF;padding-bottom:5px;margin-bottom:15px;}
-.table{width:100%;border-collapse:collapse;}
-.table th,.table td{border:1px solid #ccc;padding:8px;text-align:left;border-radius:5px;}
-.table th{background:#0A4DA3;color:white;}
+
+body{
+font-family:Arial;
+margin:0;
+background:#f4f6fb;
+}
+
+header{
+background:#0A4DA3;
+color:white;
+padding:15px;
+text-align:center;
+font-size:24px;
+}
+
+nav{
+background:#00AEEF;
+padding:10px;
+text-align:center;
+}
+
+nav button{
+margin:5px;
+padding:8px 12px;
+border:none;
+background:white;
+color:#00AEEF;
+border-radius:6px;
+cursor:pointer;
+}
+
+.container{
+padding:20px;
+max-width:1100px;
+margin:auto;
+}
+
+.card{
+background:white;
+padding:15px;
+margin-bottom:10px;
+border-radius:8px;
+box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+gap:15px;
+}
+
+input,select{
+padding:6px;
+margin:4px;
+}
+
+button.action{
+background:#F9A825;
+border:none;
+padding:8px 12px;
+border-radius:6px;
+cursor:pointer;
+}
+
+canvas{
+border:1px solid #ddd;
+background:#e6f7ff;
+}
+
 </style>
+
 </head>
+
 <body>
-<header>NileCart Super Prototype v9</header>
+
+<header>NileCart Super Platform v11</header>
+
 <nav id="nav"></nav>
+
 <div class="container" id="app"></div>
 
 <script>
-/* ---------------- INIT LOCALSTORAGE ---------------- */
+
+/* ---------------- DATABASE INIT ---------------- */
+
 function initDB(){
-  if(!localStorage.users){
-    let users=[
-      {id:1,name:"Admin",email:"admin@nilecart.com",password:"1234",role:"admin"},
-      {id:2,name:"Vendor",email:"vendor@nilecart.com",password:"1234",role:"vendor"},
-      {id:3,name:"Restaurant",email:"food@nilecart.com",password:"1234",role:"restaurant"},
-      {id:4,name:"Bus Operator",email:"bus@nilecart.com",password:"1234",role:"bus"},
-      {id:5,name:"Rider",email:"rider@nilecart.com",password:"1234",role:"rider"},
-      {id:6,name:"Customer",email:"customer@nilecart.com",password:"1234",role:"customer"}
-    ];
-    localStorage.users=JSON.stringify(users);
-  }
-  if(!localStorage.products) localStorage.products="[]";
-  if(!localStorage.menu) localStorage.menu="[]";
-  if(!localStorage.trips) localStorage.trips="[]";
-  if(!localStorage.orders) localStorage.orders="[]";
-  if(!localStorage.shipments) localStorage.shipments="[]";
-  if(!localStorage.notifications) localStorage.notifications="[]";
-}
-initDB();
 
-/* ---------------- AUTH ---------------- */
-function login(){
-  let email=document.getElementById("email").value;
-  let pass=document.getElementById("pass").value;
-  let users=JSON.parse(localStorage.users);
-  let user=users.find(u=>u.email==email && u.password==pass);
-  if(!user){alert("Login failed");return;}
-  localStorage.session=JSON.stringify(user);
-  renderNav(); loadDashboard();
-}
-function logout(){localStorage.removeItem("session");renderLogin();}
+if(!localStorage.users){
 
-/* ---------------- NAV ---------------- */
-function renderNav(){
-  let user=JSON.parse(localStorage.session);
-  let nav=document.getElementById("nav");
-  nav.innerHTML="";
-  nav.innerHTML+=`<button onclick="loadDashboard()">Home</button>`;
-  nav.innerHTML+=`<button onclick="showAnalytics()">Analytics</button>`;
-  nav.innerHTML+=`<button onclick="showLogisticsMap()">Logistics Map</button>`;
-  nav.innerHTML+=`<button onclick="showNotifications()">Notifications</button>`;
-  if(["admin","vendor","restaurant","bus"].includes(user.role)){
-    nav.innerHTML+=`<button onclick="createDummyData()">Generate Dummy Data</button>`;
-  }
-  nav.innerHTML+=`<button onclick="logout()">Logout</button>`;
+localStorage.users=JSON.stringify([
+{id:1,name:"Admin",email:"admin@nilecart.com",password:"1234",role:"admin"},
+{id:2,name:"Vendor",email:"vendor@nilecart.com",password:"1234",role:"vendor"},
+{id:3,name:"Restaurant",email:"food@nilecart.com",password:"1234",role:"restaurant"},
+{id:4,name:"Bus Operator",email:"bus@nilecart.com",password:"1234",role:"bus"},
+{id:5,name:"Rider",email:"rider@nilecart.com",password:"1234",role:"rider"},
+{id:6,name:"Customer",email:"customer@nilecart.com",password:"1234",role:"customer"}
+])
+
 }
+
+if(!localStorage.products) localStorage.products="[]"
+if(!localStorage.menu) localStorage.menu="[]"
+if(!localStorage.orders) localStorage.orders="[]"
+if(!localStorage.trips) localStorage.trips="[]"
+if(!localStorage.shipments) localStorage.shipments="[]"
+if(!localStorage.notifications) localStorage.notifications="[]"
+if(!localStorage.cart) localStorage.cart="[]"
+
+}
+
+initDB()
 
 /* ---------------- LOGIN ---------------- */
+
 function renderLogin(){
-document.getElementById("nav").innerHTML="";
+
+document.getElementById("nav").innerHTML=""
+
 document.getElementById("app").innerHTML=`
+
 <div class="card">
-<h3>Login</h3>
+
+<h2>Login</h2>
+
 <input id="email" placeholder="Email"><br>
 <input id="pass" type="password" placeholder="Password"><br>
+
 <button class="action" onclick="login()">Login</button>
-<p>Demo Accounts:</p>
+
+<p>
 admin@nilecart.com / 1234<br>
 vendor@nilecart.com / 1234<br>
 food@nilecart.com / 1234<br>
 bus@nilecart.com / 1234<br>
 rider@nilecart.com / 1234<br>
 customer@nilecart.com / 1234
-</div>`;
+</p>
+
+</div>
+
+`
+}
+
+function login(){
+
+let email=document.getElementById("email").value
+let pass=document.getElementById("pass").value
+
+let users=JSON.parse(localStorage.users)
+
+let u=users.find(x=>x.email==email && x.password==pass)
+
+if(!u){alert("Login failed");return}
+
+localStorage.session=JSON.stringify(u)
+
+renderNav()
+loadDashboard()
+
+}
+
+function logout(){
+localStorage.removeItem("session")
+renderLogin()
+}
+
+/* ---------------- NAV ---------------- */
+
+function renderNav(){
+
+let user=JSON.parse(localStorage.session)
+
+let nav=document.getElementById("nav")
+
+nav.innerHTML=""
+
+nav.innerHTML+=`<button onclick="loadDashboard()">Home</button>`
+nav.innerHTML+=`<button onclick="showLogistics()">Logistics Map</button>`
+nav.innerHTML+=`<button onclick="showNotifications()">Notifications</button>`
+
+if(user.role=="customer"){
+nav.innerHTML+=`<button onclick="showMarketplace()">Marketplace</button>`
+nav.innerHTML+=`<button onclick="createShipment()">Ship Parcel</button>`
+}
+
+if(user.role=="vendor"){
+nav.innerHTML+=`<button onclick="vendorPanel()">Vendor</button>`
+}
+
+if(user.role=="restaurant"){
+nav.innerHTML+=`<button onclick="restaurantPanel()">Restaurant</button>`
+}
+
+if(user.role=="bus"){
+nav.innerHTML+=`<button onclick="busPanel()">Bus Trips</button>`
+}
+
+if(user.role=="rider"){
+nav.innerHTML+=`<button onclick="riderPanel()">Deliveries</button>`
+}
+
+if(user.role=="admin"){
+nav.innerHTML+=`<button onclick="adminPanel()">Admin</button>`
+}
+
+nav.innerHTML+=`<button onclick="logout()">Logout</button>`
+
 }
 
 /* ---------------- DASHBOARD ---------------- */
+
 function loadDashboard(){
-  renderNav();
-  let user=JSON.parse(localStorage.session);
-  let html=`<div class="card"><h2>Welcome ${user.name}</h2>Role: ${user.role}</div>`;
 
-  if(user.role=="customer"){
-    html+=`
-    <div class="card">
-    <h3>My Orders</h3>
-    <table class="table"><tr><th>ID</th><th>Type</th><th>Status</th></tr>
-    ${JSON.parse(localStorage.orders).filter(o=>o.customer==user.email).map(o=>`<tr><td>${o.id}</td><td>${o.type}</td><td>${o.status||'Pending'}</td></tr>`).join('')}
-    </table>
-    </div>
-    <div class="card">
-    <h3>Book Bus Ticket</h3>
-    <select id="busSelect">${JSON.parse(localStorage.trips).map((t,i)=>`<option value="${i}">${t.route}</option>`).join('')}</select>
-    <button class="action" onclick="bookTicket()">Book</button>
-    </div>
-    `;
-  }else if(user.role=="bus"){
-    html+=`<div class="card">
-      <h3>My Trips</h3>
-      <table class="table"><tr><th>Route</th><th>Seats</th></tr>
-      ${JSON.parse(localStorage.trips).filter(t=>t.operator==user.email).map(t=>`<tr><td>${t.route}</td><td>${t.seats.join(', ')}</td></tr>`).join('')}
-      </table></div>`;
-  }
+let user=JSON.parse(localStorage.session)
 
-  document.getElementById("app").innerHTML=html;
+document.getElementById("app").innerHTML=`
+
+<div class="card">
+
+<h2>Welcome ${user.name}</h2>
+Role: ${user.role}
+
+</div>
+
+`
+
 }
 
-/* ---------------- BUS TICKETS ---------------- */
-function bookTicket(){
-  let user=JSON.parse(localStorage.session);
-  let index=document.getElementById("busSelect").value;
-  let trips=JSON.parse(localStorage.trips);
-  if(!trips[index].seats) trips[index].seats=[];
-  trips[index].seats.push(user.email);
-  localStorage.trips=JSON.stringify(trips);
-  addNotification(`Ticket booked for ${trips[index].route}`);
-  loadDashboard();
+/* ---------------- MARKETPLACE ---------------- */
+
+function showMarketplace(){
+
+let products=JSON.parse(localStorage.products)
+
+let html=`<h2>Marketplace</h2><div class="grid">`
+
+products.forEach((p,i)=>{
+
+html+=`
+<div class="card">
+<h3>${p.name}</h3>
+Price: $${p.price}<br>
+<button onclick="addCart(${i})">Add</button>
+</div>
+`
+
+})
+
+html+=`</div><button onclick="viewCart()">Cart</button>`
+
+document.getElementById("app").innerHTML=html
+
+}
+
+function addCart(i){
+
+let cart=JSON.parse(localStorage.cart)
+let products=JSON.parse(localStorage.products)
+
+cart.push(products[i])
+
+localStorage.cart=JSON.stringify(cart)
+
+alert("Added")
+
+}
+
+function viewCart(){
+
+let cart=JSON.parse(localStorage.cart)
+
+let html="<h2>Cart</h2>"
+
+cart.forEach(c=>{
+html+=`<div class="card">${c.name} - $${c.price}</div>`
+})
+
+html+=`<button onclick="checkout()">Checkout</button>`
+
+document.getElementById("app").innerHTML=html
+
+}
+
+function checkout(){
+
+let cart=JSON.parse(localStorage.cart)
+let orders=JSON.parse(localStorage.orders)
+let user=JSON.parse(localStorage.session)
+
+cart.forEach(p=>{
+
+orders.push({
+id:Date.now(),
+type:"product",
+product:p.name,
+customer:user.email,
+status:"Pending"
+})
+
+})
+
+localStorage.orders=JSON.stringify(orders)
+localStorage.cart="[]"
+
+alert("Order placed")
+
+}
+
+/* ---------------- VENDOR ---------------- */
+
+function vendorPanel(){
+
+let html=`
+<h2>Vendor Products</h2>
+
+<input id="pname" placeholder="Name">
+<input id="pprice" placeholder="Price">
+
+<button onclick="addProduct()">Add</button>
+
+`
+
+let products=JSON.parse(localStorage.products)
+
+products.forEach(p=>{
+html+=`<div class="card">${p.name} - $${p.price}</div>`
+})
+
+document.getElementById("app").innerHTML=html
+
+}
+
+function addProduct(){
+
+let name=document.getElementById("pname").value
+let price=document.getElementById("pprice").value
+
+let products=JSON.parse(localStorage.products)
+
+products.push({name,price})
+
+localStorage.products=JSON.stringify(products)
+
+vendorPanel()
+
+}
+
+/* ---------------- RESTAURANT ---------------- */
+
+function restaurantPanel(){
+
+let html=`
+<h2>Restaurant Menu</h2>
+
+<input id="fname" placeholder="Food">
+<input id="fprice" placeholder="Price">
+
+<button onclick="addFood()">Add</button>
+
+`
+
+let menu=JSON.parse(localStorage.menu)
+
+menu.forEach(m=>{
+html+=`<div class="card">${m.name} - $${m.price}</div>`
+})
+
+document.getElementById("app").innerHTML=html
+
+}
+
+function addFood(){
+
+let name=document.getElementById("fname").value
+let price=document.getElementById("fprice").value
+
+let menu=JSON.parse(localStorage.menu)
+
+menu.push({name,price})
+
+localStorage.menu=JSON.stringify(menu)
+
+restaurantPanel()
+
+}
+
+/* ---------------- BUS ---------------- */
+
+function busPanel(){
+
+let trips=JSON.parse(localStorage.trips)
+
+let html="<h2>Bus Trips</h2>"
+
+html+=`<button onclick="createTrip()">Create Trip</button>`
+
+trips.forEach(t=>{
+html+=`<div class="card">${t.route} | Seats: ${t.seats.length}</div>`
+})
+
+document.getElementById("app").innerHTML=html
+
+}
+
+function createTrip(){
+
+let trips=JSON.parse(localStorage.trips)
+
+trips.push({
+route:"Juba → Kampala",
+seats:[],
+progress:0
+})
+
+localStorage.trips=JSON.stringify(trips)
+
+busPanel()
+
+}
+
+/* ---------------- RIDER ---------------- */
+
+function riderPanel(){
+
+let shipments=JSON.parse(localStorage.shipments)
+
+let html="<h2>Deliveries</h2>"
+
+shipments.forEach((s,i)=>{
+
+html+=`
+<div class="card">
+
+Tracking: ${s.tracking}<br>
+Status: ${s.status}
+
+<select onchange="updateShipment(${i},this.value)">
+<option>Created</option>
+<option>Picked Up</option>
+<option>In Transit</option>
+<option>Out for Delivery</option>
+<option>Delivered</option>
+</select>
+
+</div>
+`
+
+})
+
+document.getElementById("app").innerHTML=html
+
+}
+
+function updateShipment(i,status){
+
+let shipments=JSON.parse(localStorage.shipments)
+
+shipments[i].status=status
+
+localStorage.shipments=JSON.stringify(shipments)
+
+alert("Updated")
+
+}
+
+/* ---------------- SHIPPING ---------------- */
+
+function createShipment(){
+
+let shipments=JSON.parse(localStorage.shipments)
+
+shipments.push({
+tracking:"NC"+Math.floor(Math.random()*100000),
+status:"Created"
+})
+
+localStorage.shipments=JSON.stringify(shipments)
+
+alert("Shipment created")
+
+}
+
+/* ---------------- ADMIN ---------------- */
+
+function adminPanel(){
+
+let users=JSON.parse(localStorage.users)
+let orders=JSON.parse(localStorage.orders)
+let shipments=JSON.parse(localStorage.shipments)
+let trips=JSON.parse(localStorage.trips)
+
+document.getElementById("app").innerHTML=`
+
+<h2>Admin Dashboard</h2>
+
+<div class="card">Users: ${users.length}</div>
+<div class="card">Orders: ${orders.length}</div>
+<div class="card">Shipments: ${shipments.length}</div>
+<div class="card">Trips: ${trips.length}</div>
+
+`
+
+}
+
+/* ---------------- MAP ---------------- */
+
+function showLogistics(){
+
+document.getElementById("app").innerHTML=`
+<h2>Logistics Map</h2>
+<canvas id="map" width="900" height="400"></canvas>
+`
+
+let canvas=document.getElementById("map")
+let ctx=canvas.getContext("2d")
+
+let shipments=JSON.parse(localStorage.shipments)
+
+function draw(){
+
+ctx.clearRect(0,0,900,400)
+
+ctx.fillText("Juba",80,200)
+ctx.fillText("Kampala",800,200)
+
+ctx.beginPath()
+ctx.moveTo(100,200)
+ctx.lineTo(800,200)
+ctx.stroke()
+
+shipments.forEach((s,i)=>{
+
+if(!s.progress) s.progress=0
+
+s.progress+=0.002
+
+let x=100+(700*s.progress)
+
+ctx.beginPath()
+ctx.arc(x,200,8,0,6.28)
+ctx.fill()
+
+})
+
+}
+
+setInterval(draw,30)
+
 }
 
 /* ---------------- NOTIFICATIONS ---------------- */
-function addNotification(message){
-  let notifications=JSON.parse(localStorage.notifications);
-  let user=JSON.parse(localStorage.session);
-  notifications.push({user:user.email,message:message,time:new Date().toLocaleTimeString()});
-  localStorage.notifications=JSON.stringify(notifications);
-  showPopupNotification(message);
-}
-function showPopupNotification(message){
-  let div=document.createElement("div");
-  div.className="notification";
-  div.innerText=message;
-  document.body.appendChild(div);
-  setTimeout(()=>{div.remove();},4000);
-}
+
 function showNotifications(){
-  let notifications=JSON.parse(localStorage.notifications);
-  let user=JSON.parse(localStorage.session);
-  let html="<h2 class='section-title'>Notifications</h2>";
-  notifications.filter(n=>n.user==user.email).forEach(n=>{
-    html+=`<div class="card">${n.time}: ${n.message}</div>`;
-  });
-  document.getElementById("app").innerHTML=html;
-}
 
-/* ---------------- LOGISTICS MAP WITH ANIMATION ---------------- */
-function showLogisticsMap(){
-document.getElementById("app").innerHTML=`<h2 class="section-title">Interactive Logistics Map</h2>
-<canvas id="mapCanvas" width="900" height="450"></canvas>
-<p>Shipments, buses, and riders move in real-time!</p>`;
-let canvas=document.getElementById("mapCanvas");let ctx=canvas.getContext("2d");
-let shipments=JSON.parse(localStorage.shipments);
-let trips=JSON.parse(localStorage.trips);
-let riders=JSON.parse(localStorage.users).filter(u=>u.role=="rider");
-let cities={Juba:{x:100,y:225},Kampala:{x:800,y:225}};
+let notes=JSON.parse(localStorage.notifications)
 
-function drawMap(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  // Cities
-  ctx.fillStyle="#0A4DA3"; ctx.beginPath(); ctx.arc(cities.Juba.x,cities.Juba.y,18,0,2*Math.PI); ctx.fill();
-  ctx.fillText("Juba",cities.Juba.x-15,cities.Juba.y-25);
-  ctx.beginPath(); ctx.arc(cities.Kampala.x,cities.Kampala.y,18,0,2*Math.PI); ctx.fill();
-  ctx.fillText("Kampala",cities.Kampala.x-20,cities.Kampala.y-25);
+let html="<h2>Notifications</h2>"
 
-  // Shipments
-  shipments.forEach(s=>{
-    if(!s.progress) s.progress=0;
-    if(s.status!="Delivered") s.progress=Math.min(s.progress+0.005,1);
-    let px=cities.Juba.x+(cities.Kampala.x-cities.Juba.x)*s.progress;
-    ctx.fillStyle="orange"; ctx.beginPath(); ctx.arc(px,cities.Juba.y,10,0,2*Math.PI); ctx.fill();
-    ctx.fillText(s.tracking+" "+s.status,px-30,cities.Juba.y-15);
-    if(s.progress>=1 && s.status!="Delivered") {s.status="Delivered"; addNotification(`Shipment ${s.tracking} delivered!`);}
-  });
+notes.forEach(n=>{
+html+=`<div class="card">${n}</div>`
+})
 
-  // Trips
-  trips.forEach(t=>{
-    if(!t.progress) t.progress=0;
-    t.progress=Math.min(t.progress+0.002,1);
-    let px=cities.Juba.x+(cities.Kampala.x-cities.Juba.x)*t.progress;
-    ctx.fillStyle="green"; ctx.beginPath(); ctx.arc(px,cities.Juba.y-50,10,0,2*Math.PI); ctx.fill();
-    ctx.fillText("Bus: "+t.route,px-30,cities.Juba.y-65);
-  });
+document.getElementById("app").innerHTML=html
 
-  // Riders
-  riders.forEach(r=>{
-    if(!r.progress) r.progress=Math.random()*0.1;
-    r.progress=(r.progress+0.004)%1;
-    let px=cities.Juba.x+(cities.Kampala.x-cities.Juba.x)*r.progress;
-    ctx.fillStyle="red"; ctx.beginPath(); ctx.arc(px,cities.Juba.y+50,10,0,2*Math.PI); ctx.fill();
-    ctx.fillText(r.name,px-20,cities.Juba.y+35);
-  });
-}
-setInterval(drawMap,30);
-}
-
-/* ---------------- ANALYTICS ---------------- */
-function showAnalytics(){
-let orders=JSON.parse(localStorage.orders);
-let shipments=JSON.parse(localStorage.shipments);
-let trips=JSON.parse(localStorage.trips);
-
-document.getElementById("app").innerHTML=`
-<h2 class='section-title'>Analytics Dashboard</h2>
-<div class="card"><h3>Orders by Type</h3><canvas id="chartOrders" width="450" height="200"></canvas></div>
-<div class="card"><h3>Shipments by Status</h3><canvas id="chartShipments" width="450" height="200"></canvas></div>
-<div class="card"><h3>Bus Trips Status</h3><canvas id="chartTrips" width="450" height="200"></canvas></div>
-`;
-
-function drawBarChart(canvasId,data,labels,color){
-  let c=document.getElementById(canvasId);
-  let ctx=c.getContext("2d");
-  ctx.clearRect(0,0,c.width,c.height);
-  let max=Math.max(...data,1);
-  let barWidth=c.width/data.length-10;
-  data.forEach((v,i)=>{
-    let h=(v/max)*(c.height-20);
-    ctx.fillStyle=color;
-    ctx.fillRect(i*(barWidth+10)+10,c.height-h-10,barWidth,h);
-    ctx.fillStyle="#000";
-    ctx.fillText(labels[i]+"("+v+")",i*(barWidth+10)+c.height-10,c.height-10);
-  });
-}
-
-let types=["product","food","ticket"];
-let ordersData=types.map(t=>orders.filter(o=>o.type==t).length);
-drawBarChart("chartOrders",ordersData,types,"#0A4DA3");
-
-let statuses=["Created","Picked Up","In Transit","Arrived","Out for Delivery","Delivered"];
-let shipmentData=statuses.map(s=>shipments.filter(sh=>sh.status==s).length);
-drawBarChart("chartShipments",shipmentData,statuses,"#F9A825");
-
-let tripData=trips.map(t=>t.seats?t.seats.length:0);
-let tripLabels=trips.map(t=>t.route);
-drawBarChart("chartTrips",tripData,tripLabels,"#00AEEF");
-}
-
-/* ---------------- DUMMY DATA CREATOR ---------------- */
-function createDummyData(){
-  let orders=JSON.parse(localStorage.orders);
-  let user=JSON.parse(localStorage.session);
-  orders.push({id:Date.now(),type:"product",customer:user.email}); 
-  orders.push({id:Date.now()+1,type:"food",customer:user.email}); 
-  orders.push({id:Date.now()+2,type:"ticket",customer:user.email});
-  localStorage.orders=JSON.stringify(orders);
-
-  let shipments=JSON.parse(localStorage.shipments);
-  shipments.push({tracking:"SHP"+Math.floor(Math.random()*1000),status:"Created",progress:0});
-  shipments.push({tracking:"SHP"+Math.floor(Math.random()*1000),status:"Picked Up",progress:0.2});
-  localStorage.shipments=JSON.stringify(shipments);
-
-  let trips=JSON.parse(localStorage.trips);
-  trips.push({route:"Juba→Kampala",seats:[],operator:user.email,progress:0});
-  trips.push({route:"Juba→Kampala",seats:[],operator:user.email,progress:0.1});
-  localStorage.trips=JSON.stringify(trips);
-
-  addNotification("Dummy data added!");
-  loadDashboard();
 }
 
 /* ---------------- START ---------------- */
-if(localStorage.session){loadDashboard();}else{renderLogin();}
+
+if(localStorage.session){
+
+renderNav()
+loadDashboard()
+
+}else{
+
+renderLogin()
+
+}
+
 </script>
+
 </body>
 </html>
