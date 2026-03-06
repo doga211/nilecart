@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>NileCart Super Prototype v7</title>
+<title>NileCart Super Prototype v8</title>
 <style>
 body{font-family:Arial;margin:0;background:#f2f4f7;}
 header{background:#0A4DA3;color:white;padding:15px;font-size:20px;}
@@ -17,7 +17,7 @@ canvas{border:1px solid #333;background:#d0f4ff;margin-top:10px;}
 </style>
 </head>
 <body>
-<header>NileCart Super Prototype v7</header>
+<header>NileCart Super Prototype v8</header>
 <nav id="nav"></nav>
 <div class="container" id="app"></div>
 
@@ -120,11 +120,11 @@ function showNotifications(){
   document.getElementById("app").innerHTML=html;
 }
 
-/* ---------------- LOGISTICS MAP ---------------- */
+/* ---------------- LOGISTICS MAP WITH ANIMATION ---------------- */
 function showLogisticsMap(){
 document.getElementById("app").innerHTML=`<h2>Interactive Logistics Map</h2>
 <canvas id="mapCanvas" width="800" height="400"></canvas>
-<p>Click dots to update status.</p>`;
+<p>Shipments, buses, and riders move in real-time!</p>`;
 let canvas=document.getElementById("mapCanvas");let ctx=canvas.getContext("2d");
 let shipments=JSON.parse(localStorage.shipments);
 let trips=JSON.parse(localStorage.trips);
@@ -133,60 +133,46 @@ let cities={Juba:{x:100,y:200},Kampala:{x:700,y:200}};
 
 function drawMap(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
+  // Cities
   ctx.fillStyle="#0A4DA3"; ctx.beginPath(); ctx.arc(cities.Juba.x,cities.Juba.y,15,0,2*Math.PI); ctx.fill();
   ctx.fillText("Juba",cities.Juba.x-15,cities.Juba.y-20);
   ctx.beginPath(); ctx.arc(cities.Kampala.x,cities.Kampala.y,15,0,2*Math.PI); ctx.fill();
   ctx.fillText("Kampala",cities.Kampala.x-20,cities.Kampala.y-20);
-  shipments.forEach((s,i)=>{
-    if(!s.pos) s.pos=0;
-    let px=cities.Juba.x+(cities.Kampala.x-cities.Juba.x)*(["Created","Picked Up","In Transit","Arrived","Out for Delivery","Delivered"].indexOf(s.status)/5);
+
+  // Animate Shipments
+  shipments.forEach(s=>{
+    if(!s.progress) s.progress=0;
+    if(s.status!="Delivered") s.progress=Math.min(s.progress+0.005,1);
+    let px=cities.Juba.x + (cities.Kampala.x-cities.Juba.x)*s.progress;
     ctx.fillStyle="orange"; ctx.beginPath(); ctx.arc(px,cities.Juba.y,10,0,2*Math.PI); ctx.fill();
     ctx.fillText(s.tracking+" "+s.status,px-30,cities.Juba.y-15);
-    s.x=px; s.y=cities.Juba.y; s.index=i; s.type="shipment";
+    s.x=px; s.y=cities.Juba.y; s.type="shipment";
+    if(s.progress>=1 && s.status!="Delivered") {s.status="Delivered"; addNotification(`Shipment ${s.tracking} delivered!`);}
   });
-  trips.forEach((t,i)=>{
-    if(!t.pos) t.pos=0;
-    let px=cities.Juba.x+(cities.Kampala.x-cities.Juba.x)*(t.seats?t.seats.length/5:0);
+
+  // Animate Trips
+  trips.forEach(t=>{
+    if(!t.progress) t.progress=0;
+    t.progress=Math.min(t.progress+0.002,1);
+    let px=cities.Juba.x + (cities.Kampala.x-cities.Juba.x)*t.progress;
     ctx.fillStyle="green"; ctx.beginPath(); ctx.arc(px,cities.Juba.y-50,10,0,2*Math.PI); ctx.fill();
     ctx.fillText("Bus: "+t.route,px-30,cities.Juba.y-65);
-    t.x=px; t.y=cities.Juba.y-50; t.index=i; t.type="bus";
+    t.x=px; t.y=cities.Juba.y-50; t.type="bus";
   });
-  riders.forEach((r,i)=>{
-    if(!r.pos) r.pos=0;
-    let px=cities.Juba.x+(cities.Kampala.x-cities.Juba.x)*(r.pos/5);
+
+  // Animate Riders
+  riders.forEach(r=>{
+    if(!r.progress) r.progress=Math.random()*0.1;
+    r.progress=(r.progress+0.004)%1;
+    let px=cities.Juba.x + (cities.Kampala.x-cities.Juba.x)*r.progress;
     ctx.fillStyle="red"; ctx.beginPath(); ctx.arc(px,cities.Juba.y+50,10,0,2*Math.PI); ctx.fill();
     ctx.fillText(r.name,px-20,cities.Juba.y+35);
-    r.x=px; r.y=cities.Juba.y+50; r.index=i; r.type="rider";
+    r.x=px; r.y=cities.Juba.y+50; r.type="rider";
   });
 }
-drawMap();
 
-canvas.addEventListener("click",(e)=>{
-  let rect=canvas.getBoundingClientRect();
-  let mx=e.clientX-rect.left;
-  let my=e.clientY-rect.top;
-  [...shipments,...trips,...riders].forEach(item=>{
-    let dx=mx-item.x; let dy=my-item.y;
-    if(Math.sqrt(dx*dx+dy*dy)<10){
-      if(item.type=="shipment"){
-        let statuses=["Created","Picked Up","In Transit","Arrived","Out for Delivery","Delivered"];
-        let nextIndex=(statuses.indexOf(shipments[item.index].status)+1)%statuses.length;
-        shipments[item.index].status=statuses[nextIndex];
-        localStorage.shipments=JSON.stringify(shipments);
-        addNotification(`Shipment ${shipments[item.index].tracking} updated to ${shipments[item.index].status}`);
-      }
-      if(item.type=="bus"){
-        addNotification(`Bus ${trips[item.index].route} clicked`);
-      }
-      if(item.type=="rider"){
-        addNotification(`Rider ${riders[item.index].name} clicked`);
-      }
-    }
-  });
-  drawMap();
-});
-
-setInterval(drawMap,1000);
+setInterval(drawMap,30);
+}
 
 /* ---------------- ANALYTICS ---------------- */
 function showAnalytics(){
@@ -199,9 +185,8 @@ document.getElementById("app").innerHTML=`
 <div class="card"><h3>Orders by Type</h3><canvas id="chartOrders" width="400" height="200"></canvas></div>
 <div class="card"><h3>Shipments by Status</h3><canvas id="chartShipments" width="400" height="200"></canvas></div>
 <div class="card"><h3>Bus Trips Status</h3><canvas id="chartTrips" width="400" height="200"></canvas></div>
-`);
+`;
 
-/* Chart helper */
 function drawBarChart(canvasId,data,labels,color){
   let c=document.getElementById(canvasId);
   let ctx=c.getContext("2d");
@@ -217,17 +202,14 @@ function drawBarChart(canvasId,data,labels,color){
   });
 }
 
-/* Orders by type */
 let types=["product","food","ticket"];
 let ordersData=types.map(t=>orders.filter(o=>o.type==t).length);
 drawBarChart("chartOrders",ordersData,types,"#0A4DA3");
 
-/* Shipments by status */
 let statuses=["Created","Picked Up","In Transit","Arrived","Out for Delivery","Delivered"];
 let shipmentData=statuses.map(s=>shipments.filter(sh=>sh.status==s).length);
 drawBarChart("chartShipments",shipmentData,statuses,"#F9A825");
 
-/* Trips by occupancy */
 let tripData=trips.map(t=>t.seats?t.seats.length:0);
 let tripLabels=trips.map(t=>t.route);
 drawBarChart("chartTrips",tripData,tripLabels,"#00AEEF");
@@ -235,23 +217,20 @@ drawBarChart("chartTrips",tripData,tripLabels,"#00AEEF");
 
 /* ---------------- DUMMY DATA CREATOR ---------------- */
 function createDummyData(){
-  // Orders
   let orders=JSON.parse(localStorage.orders);
   orders.push({id:Date.now(),type:"product"}); 
   orders.push({id:Date.now()+1,type:"food"}); 
   orders.push({id:Date.now()+2,type:"ticket"});
   localStorage.orders=JSON.stringify(orders);
 
-  // Shipments
   let shipments=JSON.parse(localStorage.shipments);
-  shipments.push({tracking:"SHP"+Math.floor(Math.random()*1000),status:"Created"});
-  shipments.push({tracking:"SHP"+Math.floor(Math.random()*1000),status:"Picked Up"});
+  shipments.push({tracking:"SHP"+Math.floor(Math.random()*1000),status:"Created",progress:0});
+  shipments.push({tracking:"SHP"+Math.floor(Math.random()*1000),status:"Picked Up",progress:0.2});
   localStorage.shipments=JSON.stringify(shipments);
 
-  // Trips
   let trips=JSON.parse(localStorage.trips);
-  trips.push({route:"Juba→Kampala",seats:[1,2,3]});
-  trips.push({route:"Juba→Kampala",seats:[1,2]});
+  trips.push({route:"Juba→Kampala",seats:[1,2,3],progress:0});
+  trips.push({route:"Juba→Kampala",seats:[1,2],progress:0.1});
   localStorage.trips=JSON.stringify(trips);
 
   addNotification("Dummy data added!");
