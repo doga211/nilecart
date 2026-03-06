@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
+
 <meta charset="UTF-8">
-<title>NileCart v13 Super Platform</title>
+<title>NileCart v14 Super Platform</title>
+
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -10,9 +12,9 @@
 <style>
 
 body{
-font-family:Arial;
 margin:0;
-background:#f2f5fb;
+font-family:Arial;
+background:#f4f6fb;
 }
 
 header{
@@ -21,7 +23,12 @@ color:white;
 padding:15px;
 display:flex;
 justify-content:space-between;
-align-items:center;
+}
+
+.container{
+padding:20px;
+max-width:1200px;
+margin:auto;
 }
 
 button{
@@ -32,12 +39,6 @@ border-radius:6px;
 cursor:pointer;
 }
 
-.container{
-padding:20px;
-max-width:1100px;
-margin:auto;
-}
-
 .grid{
 display:grid;
 grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
@@ -46,15 +47,15 @@ gap:20px;
 
 .card{
 background:white;
-border-radius:10px;
 padding:15px;
-box-shadow:0 2px 6px rgba(0,0,0,0.1);
+border-radius:10px;
+box-shadow:0 3px 10px rgba(0,0,0,0.1);
 }
 
 .tabs{
 display:flex;
 gap:10px;
-margin-bottom:15px;
+margin-bottom:20px;
 flex-wrap:wrap;
 }
 
@@ -75,10 +76,11 @@ border:1px solid #ccc;
 }
 
 #map{
-height:320px;
+height:300px;
 background:#e8f1ff;
 border-radius:10px;
 position:relative;
+overflow:hidden;
 }
 
 .dot{
@@ -89,43 +91,62 @@ border-radius:50%;
 position:absolute;
 }
 
-.seat{
-display:inline-block;
-border:1px solid #999;
-padding:8px;
-margin:4px;
-cursor:pointer;
+.timeline{
+border-left:3px solid #0A4DA3;
+padding-left:10px;
 }
 
-.cart{
+.step{
+margin:10px 0;
+}
+
+.bottomnav{
 position:fixed;
-bottom:20px;
-right:20px;
+bottom:0;
+left:0;
+right:0;
 background:white;
-padding:15px;
-border-radius:10px;
-box-shadow:0 4px 10px rgba(0,0,0,0.2);
+display:flex;
+justify-content:space-around;
+padding:10px;
+border-top:1px solid #ddd;
+}
+
+@media(min-width:900px){
+.bottomnav{
+display:none;
+}
 }
 
 </style>
+
 </head>
 
 <body>
 
 <header>
-<div>NileCart</div>
+<div><b>NileCart</b></div>
 <div id="user"></div>
 </header>
 
 <div class="container">
+
 <div id="app"></div>
+
 </div>
 
-<div id="cartBox" class="cart"></div>
+<div id="cart"></div>
+
+<div class="bottomnav">
+<div onclick="marketplace()">Home</div>
+<div onclick="orders()">Orders</div>
+<div onclick="tracking()">Track</div>
+<div onclick="profile()">Profile</div>
+</div>
 
 <script>
 
-/* ---------------- DATABASE ---------------- */
+/* DATABASE */
 
 function seed(){
 
@@ -142,12 +163,30 @@ localStorage.users = JSON.stringify([
 
 }
 
+if(!localStorage.vendors){
+
+localStorage.vendors = JSON.stringify([
+{id:1,name:"Juba Electronics",rating:4.6},
+{id:2,name:"Nile Fashion",rating:4.2}
+])
+
+}
+
 if(!localStorage.products){
 
 localStorage.products = JSON.stringify([
-{name:"Samsung Phone",price:300,vendor:"Juba Electronics"},
-{name:"Power Bank",price:25,vendor:"Juba Electronics"},
-{name:"Laptop Bag",price:40,vendor:"Nile Tech"}
+{name:"Samsung Phone",price:300,vendor:1},
+{name:"Power Bank",price:20,vendor:1},
+{name:"T-Shirt",price:12,vendor:2}
+])
+
+}
+
+if(!localStorage.restaurants){
+
+localStorage.restaurants = JSON.stringify([
+{id:1,name:"Nile Grill"},
+{id:2,name:"Juba Kitchen"}
 ])
 
 }
@@ -155,9 +194,9 @@ localStorage.products = JSON.stringify([
 if(!localStorage.menu){
 
 localStorage.menu = JSON.stringify([
-{name:"Burger",price:5,restaurant:"Nile Grill"},
-{name:"Pizza",price:8,restaurant:"Nile Grill"},
-{name:"Chicken Meal",price:7,restaurant:"Juba Kitchen"}
+{name:"Burger",price:5,restaurant:1},
+{name:"Pizza",price:8,restaurant:1},
+{name:"Chicken Meal",price:7,restaurant:2}
 ])
 
 }
@@ -165,22 +204,22 @@ localStorage.menu = JSON.stringify([
 if(!localStorage.trips){
 
 localStorage.trips = JSON.stringify([
-{route:"Juba → Kampala",price:45,seats:32},
-{route:"Juba → Nimule",price:12,seats:30}
+{route:"Juba → Kampala",price:45},
+{route:"Juba → Nimule",price:12}
 ])
 
 }
 
-if(!localStorage.cart) localStorage.cart="[]"
 if(!localStorage.orders) localStorage.orders="[]"
 if(!localStorage.shipments) localStorage.shipments="[]"
+if(!localStorage.cart) localStorage.cart="[]"
 if(!localStorage.notifications) localStorage.notifications="[]"
 
 }
 
 seed()
 
-/* ---------------- LOGIN ---------------- */
+/* LOGIN */
 
 function login(){
 
@@ -206,75 +245,36 @@ location.reload()
 
 }
 
-/* ---------------- CART ---------------- */
+/* NOTIFICATIONS */
 
-function addCart(name,price){
+function notify(text){
 
-let cart=JSON.parse(localStorage.cart)
+let n=JSON.parse(localStorage.notifications)
 
-cart.push({name,price})
+n.push(text)
 
-localStorage.cart=JSON.stringify(cart)
-
-drawCart()
+localStorage.notifications=JSON.stringify(n)
 
 }
 
-function drawCart(){
-
-let cart=JSON.parse(localStorage.cart)
-
-let total=0
-
-let html="<b>Cart</b><br>"
-
-cart.forEach((c,i)=>{
-
-html+=c.name+" $"+c.price+"<br>"
-
-total+=Number(c.price)
-
-})
-
-html+="<br>Total: $"+total
-html+="<br><button onclick='checkout()'>Checkout</button>"
-
-document.getElementById("cartBox").innerHTML=html
-
-}
-
-function checkout(){
-
-let cart=JSON.parse(localStorage.cart)
-let orders=JSON.parse(localStorage.orders)
-
-cart.forEach(c=>orders.push({item:c.name,status:"Pending"}))
-
-localStorage.orders=JSON.stringify(orders)
-localStorage.cart="[]"
-
-alert("Order placed")
-
-drawCart()
-
-}
-
-/* ---------------- MARKETPLACE ---------------- */
+/* MARKETPLACE */
 
 function marketplace(){
 
-let products=JSON.parse(localStorage.products)
-let menu=JSON.parse(localStorage.menu)
+let vendors=JSON.parse(localStorage.vendors)
+let restaurants=JSON.parse(localStorage.restaurants)
 let trips=JSON.parse(localStorage.trips)
 
-let html=`
+let html = `
 <h2>Marketplace</h2>
 
 <div class="tabs">
-<div class="tab" onclick="shop()">Vendors</div>
-<div class="tab" onclick="food()">Restaurants</div>
-<div class="tab" onclick="buses()">Bus Tickets</div>
-<div class="tab" onclick="ship()">Shipping</div>
+
+<div class="tab" onclick="vendorsPage()">Vendors</div>
+<div class="tab" onclick="restaurantsPage()">Restaurants</div>
+<div class="tab" onclick="busPage()">Bus Tickets</div>
+<div class="tab" onclick="shipping()">Shipping</div>
+
 </div>
 
 <div id="market"></div>
@@ -282,23 +282,25 @@ let html=`
 
 app.innerHTML=html
 
-shop()
+vendorsPage()
 
 }
 
-function shop(){
+/* VENDORS */
 
-let products=JSON.parse(localStorage.products)
+function vendorsPage(){
+
+let vendors=JSON.parse(localStorage.vendors)
 
 let html='<div class="grid">'
 
-products.forEach(p=>{
+vendors.forEach(v=>{
 
 html+=`
 <div class="card">
-<b>${p.name}</b>
-<p>$${p.price}</p>
-<button onclick="addCart('${p.name}',${p.price})">Add Cart</button>
+<h3>${v.name}</h3>
+<p>⭐ ${v.rating}</p>
+<button onclick="vendorStore(${v.id})">Open Store</button>
 </div>
 `
 
@@ -310,19 +312,77 @@ market.innerHTML=html
 
 }
 
-function food(){
+function vendorStore(id){
 
-let menu=JSON.parse(localStorage.menu)
+let products=JSON.parse(localStorage.products)
+
+let html="<h3>Store</h3><div class='grid'>"
+
+products.filter(p=>p.vendor==id).forEach(p=>{
+
+html+=`
+<div class="card">
+
+<b>${p.name}</b>
+<p>$${p.price}</p>
+
+<button onclick="addCart('${p.name}',${p.price})">
+Add Cart
+</button>
+
+</div>
+`
+
+})
+
+html+="</div>"
+
+market.innerHTML=html
+
+}
+
+/* RESTAURANTS */
+
+function restaurantsPage(){
+
+let r=JSON.parse(localStorage.restaurants)
 
 let html='<div class="grid">'
 
-menu.forEach(m=>{
+r.forEach(x=>{
+
+html+=`
+<div class="card">
+<h3>${x.name}</h3>
+<button onclick="restaurantPage(${x.id})">
+View Menu
+</button>
+</div>
+`
+
+})
+
+html+="</div>"
+
+market.innerHTML=html
+
+}
+
+function restaurantPage(id){
+
+let menu=JSON.parse(localStorage.menu)
+
+let html="<h3>Menu</h3><div class='grid'>"
+
+menu.filter(m=>m.restaurant==id).forEach(m=>{
 
 html+=`
 <div class="card">
 <b>${m.name}</b>
 <p>$${m.price}</p>
-<button onclick="addCart('${m.name}',${m.price})">Order</button>
+<button onclick="addCart('${m.name}',${m.price})">
+Order
+</button>
 </div>
 `
 
@@ -334,9 +394,9 @@ market.innerHTML=html
 
 }
 
-/* ---------------- BUS ---------------- */
+/* BUS */
 
-function buses(){
+function busPage(){
 
 let trips=JSON.parse(localStorage.trips)
 
@@ -346,9 +406,14 @@ trips.forEach((t,i)=>{
 
 html+=`
 <div class="card">
-<b>${t.route}</b>
+
+<h3>${t.route}</h3>
 <p>$${t.price}</p>
-<button onclick="seatUI(${i})">Select Seat</button>
+
+<button onclick="seatSelect()">
+Select Seat
+</button>
+
 </div>
 `
 
@@ -358,13 +423,13 @@ market.innerHTML=html
 
 }
 
-function seatUI(i){
+function seatSelect(){
 
 let html="<h3>Select Seat</h3>"
 
-for(let s=1;s<=12;s++){
+for(let i=1;i<=16;i++){
 
-html+=`<div class="seat" onclick="bookSeat(${s})">${s}</div>`
+html+=`<button onclick="alert('Seat booked')">${i}</button> `
 
 }
 
@@ -372,63 +437,75 @@ market.innerHTML=html
 
 }
 
-function bookSeat(s){
+/* SHIPPING */
 
-alert("Seat "+s+" booked")
-
-}
-
-/* ---------------- SHIPPING ---------------- */
-
-function ship(){
+function shipping(){
 
 market.innerHTML=`
+
 <h3>Create Shipment</h3>
 
 <input id="sender" placeholder="Sender">
 <input id="receiver" placeholder="Receiver">
 
-<button onclick="createShipment()">Create</button>
+<button onclick="createShipment()">
+Create Shipment
+</button>
 
 `
+
 }
 
 function trackNum(){
 
-return "NC-TRK-"+Math.floor(Math.random()*99999)
+return "NC-"+Math.floor(Math.random()*99999)
 
 }
 
 function createShipment(){
 
-let shipments=JSON.parse(localStorage.shipments)
+let s=JSON.parse(localStorage.shipments)
 
-shipments.push({
-tracking:trackNum(),
-status:"Pending",
-route:"Juba → Kampala"
+let track=trackNum()
+
+s.push({
+track:track,
+status:"Created"
 })
 
-localStorage.shipments=JSON.stringify(shipments)
+localStorage.shipments=JSON.stringify(s)
 
-alert("Shipment created")
+notify("Shipment "+track+" created")
+
+alert("Shipment created "+track)
 
 }
 
-/* ---------------- RIDER ---------------- */
+/* TRACKING */
 
-function rider(){
+function tracking(){
 
-let orders=JSON.parse(localStorage.orders)
+let s=JSON.parse(localStorage.shipments)
 
-let html="<h2>Deliveries</h2>"
+let html="<h2>Tracking</h2>"
 
-orders.forEach((o,i)=>{
+s.forEach(x=>{
 
 html+=`
 <div class="card">
-${o.item} - ${o.status}
-<button onclick="deliver(${i})">Delivered</button>
+
+<b>${x.track}</b>
+
+<div class="timeline">
+
+<div class="step">✔ Created</div>
+<div class="step">✔ Picked Up</div>
+<div class="step">⬜ Border</div>
+<div class="step">⬜ Kampala</div>
+<div class="step">⬜ Delivered</div>
+
+</div>
+
 </div>
 `
 
@@ -438,19 +515,58 @@ app.innerHTML=html
 
 }
 
-function deliver(i){
+/* CART */
 
-let orders=JSON.parse(localStorage.orders)
+function addCart(name,price){
 
-orders[i].status="Delivered"
+let c=JSON.parse(localStorage.cart)
 
-localStorage.orders=JSON.stringify(orders)
+c.push({name,price})
 
-render()
+localStorage.cart=JSON.stringify(c)
+
+drawCart()
 
 }
 
-/* ---------------- ADMIN ---------------- */
+function drawCart(){
+
+let c=JSON.parse(localStorage.cart)
+
+let html="<b>Cart</b><br>"
+
+let total=0
+
+c.forEach(i=>{
+html+=i.name+" $"+i.price+"<br>"
+total+=i.price
+})
+
+html+="<br>Total $"+total
+html+="<br><button onclick='checkout()'>Checkout</button>"
+
+cart.innerHTML=html
+
+}
+
+function checkout(){
+
+let c=JSON.parse(localStorage.cart)
+let o=JSON.parse(localStorage.orders)
+
+c.forEach(i=>o.push({item:i.name,status:"New"}))
+
+localStorage.orders=JSON.stringify(o)
+
+localStorage.cart="[]"
+
+notify("New order placed")
+
+drawCart()
+
+}
+
+/* ADMIN */
 
 function admin(){
 
@@ -465,10 +581,12 @@ app.innerHTML=`
 <h3>Logistics Map</h3>
 
 <div id="map">
-<div class="dot" style="top:40%;left:20%" title="Juba"></div>
-<div class="dot" style="top:35%;left:40%" title="Nimule"></div>
-<div class="dot" style="top:32%;left:60%" title="Gulu"></div>
-<div class="dot" style="top:30%;left:75%" title="Kampala"></div>
+
+<div class="dot" style="top:40%;left:15%"></div>
+<div class="dot" style="top:35%;left:35%"></div>
+<div class="dot" style="top:33%;left:55%"></div>
+<div class="dot" style="top:30%;left:75%"></div>
+
 </div>
 
 `
@@ -479,24 +597,22 @@ new Chart(ctx,{
 type:"bar",
 data:{
 labels:["Orders"],
-datasets:[{
-label:"Total",
-data:[orders.length]
-}]
+datasets:[{label:"Orders",data:[orders.length]}]
 }
 })
 
 }
 
-/* ---------------- ROUTER ---------------- */
+/* ROUTER */
 
 function render(){
 
-let session=JSON.parse(localStorage.session||"null")
+let s=JSON.parse(localStorage.session||"null")
 
-if(!session){
+if(!s){
 
 app.innerHTML=`
+
 <h2>Login</h2>
 
 <input id="email" placeholder="email">
@@ -504,21 +620,16 @@ app.innerHTML=`
 
 <button onclick="login()">Login</button>
 
-<p>
-admin@nilecart.com / 1234<br>
-user@nilecart.com / 1234
-</p>
 `
 
 return
 
 }
 
-user.innerHTML=session.role+" <button onclick='logout()'>Logout</button>"
+user.innerHTML=s.role+" <button onclick='logout()'>Logout</button>"
 
-if(session.role=="customer") marketplace()
-if(session.role=="rider") rider()
-if(session.role=="admin") admin()
+if(s.role=="customer") marketplace()
+if(s.role=="admin") admin()
 
 drawCart()
 
@@ -530,4 +641,3 @@ render()
 
 </body>
 </html>
-
