@@ -1,3 +1,6 @@
+from pathlib import Path
+
+html = """
 <!DOCTYPE html>
 <html>
 <head>
@@ -127,3 +130,7 @@ render()
 </script>
 </body>
 </html>
+"""
+
+Path("nilecart_v15.html").write_text(html)
+print("NileCart v15 generated: nilecart_v15.html")
