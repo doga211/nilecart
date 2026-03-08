@@ -1,12 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>NileCart v15 Ultra Simulation</title>
+<title>NileCart v15 Ultra Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-/* ===================== Basic Styles ===================== */
 body{margin:0;font-family:Arial,sans-serif;background:#f4f6fb;}
 header{background:#0A4DA3;color:white;padding:15px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1000;}
 header b{font-size:1.3em;}
@@ -22,14 +21,17 @@ input,select{width:100%;padding:8px;margin:6px 0;border-radius:6px;border:1px so
 .bottomnav{position:fixed;bottom:0;left:0;right:0;background:white;display:flex;justify-content:space-around;padding:10px;border-top:1px solid #ddd;z-index:1000;}
 @media(min-width:900px){.bottomnav{display:none;}}
 #map{height:300px;background:#e8f1ff;border-radius:10px;position:relative;overflow:hidden;margin-bottom:15px;}
-.dot{width:14px;height:14px;border-radius:50%;position:absolute;transition:all 2s;}
+.dot{width:16px;height:16px;border-radius:50%;position:absolute;transition:all 2s;}
 .timeline{border-left:3px solid #0A4DA3;padding-left:10px;margin-top:5px;}
 .step{margin:8px 0;}
+table{width:100%;border-collapse:collapse;margin-bottom:15px;}
+th,td{border:1px solid #ddd;padding:8px;text-align:left;}
+th{background:#0A4DA3;color:white;}
 </style>
 </head>
 <body>
 <header>
-<div><b>NileCart v15 Ultra</b></div>
+<div><b>NileCart v15 Ultra Pro</b></div>
 <div id="user"></div>
 </header>
 <div class="container">
@@ -42,7 +44,7 @@ input,select{width:100%;padding:8px;margin:6px 0;border-radius:6px;border:1px so
 <div onclick="profile()">Profile</div>
 </div>
 <script>
-/* =================== Seed LocalStorage Database =================== */
+/* =================== LocalStorage Seed =================== */
 function seed(){
 if(!localStorage.users) localStorage.users=JSON.stringify([
 {email:"admin@nilecart.com",password:"1234",role:"admin"},
@@ -116,7 +118,7 @@ function trackNum(){return "NC-"+Math.floor(Math.random()*99999);}
 function createShipment(){let s=JSON.parse(localStorage.shipments); let track=trackNum(); s.push({track:track,status:"Created"}); localStorage.shipments=JSON.stringify(s); notify("Shipment "+track+" created"); alert("Shipment created "+track);}
 function tracking(){let s=JSON.parse(localStorage.shipments); let html="<h2>Tracking</h2>"; s.forEach(x=>{html+=`<div class="card"><b>${x.track}</b><div class="timeline"><div class="step">✔ Created</div><div class="step">✔ Picked Up</div><div class="step">⬜ Border</div><div class="step">⬜ Destination</div><div class="step">⬜ Delivered</div></div></div>`}); app.innerHTML=html;}
 
-/* =================== Live GPS Vehicle Simulation =================== */
+/* =================== Live GPS Simulation =================== */
 function renderMap(){
 let map=document.getElementById("map");
 if(!map) return;
@@ -133,45 +135,30 @@ dot.style.background=v.color;
 dot.title=v.type+" "+v.id;
 map.appendChild(dot);
 });
-vehicles.forEach(v=>{if(v.pos<v.route.length-1) v.pos++;});
+vehicles.forEach(v=>{if(v.pos<v.route.length-1)v.pos++;});
 localStorage.vehicles=JSON.stringify(vehicles);
 }
 setInterval(renderMap,2000);
 
 /* =================== Admin Dashboard =================== */
-function admin(){let orders=JSON.parse(localStorage.orders); let shipments=JSON.parse(localStorage.shipments); let ctx="<canvas id='chart'></canvas>"; let map="<div id='map'></div>"; app.innerHTML=`<h2>Admin Dashboard</h2>${ctx}${map}`; renderMap(); let ctxChart=document.getElementById("chart"); new Chart(ctxChart,{type:"bar",data:{labels:["Orders","Shipments"],datasets:[{label:"Count",data:[orders.length,shipments.length],backgroundColor:["#0A4DA3","#F9A825"]}]}});}
-  
+function admin(){
+let orders=JSON.parse(localStorage.orders); let shipments=JSON.parse(localStorage.shipments);
+app.innerHTML=`<h2>Admin Dashboard</h2><canvas id="chart"></canvas><div id="map"></div>`;
+renderMap();
+let ctx=document.getElementById("chart");
+new Chart(ctx,{type:"bar",data:{labels:["Orders","Shipments"],datasets:[{label:"Count",data:[orders.length,shipments.length],backgroundColor:["#0A4DA3","#F9A825"]}]},options:{responsive:true}});
+}
+
 /* =================== Render App =================== */
-function render(){let s=JSON.parse(localStorage.session||"null"); if(!s){app.innerHTML=`<h2>Login</h2><input id="email" placeholder="email"><input id="password" type="password" placeholder="password"><button onclick="login()">Login</button>`; return} user.innerHTML=s.role+" <button onclick='logout()'>Logout</button>"; if(s.role=="customer") marketplace(); if(s.role=="admin") admin(); drawCart();}
+function render(){
+let s=JSON.parse(localStorage.session||"null");
+if(!s){app.innerHTML=`<h2>Login</h2><input id="email" placeholder="email"><input id="password" type="password" placeholder="password"><button onclick="login()">Login</button>`; return;}
+user.innerHTML=s.role+" <button onclick='logout()'>Logout</button>";
+if(s.role=="customer") marketplace();
+if(s.role=="admin") admin();
+drawCart();
+}
 render();
 </script>
 </body>
-</html>let products=JSON.parse(localStorage.products); let html="<h3>Store</h3><div class='grid'>"
-products.filter(p=>p.vendor==id).forEach(p=>{html+=`<div class="card"><b>${p.name}</b><p>$${p.price}</p><button onclick="addCart('${p.name}',${p.price})">Add Cart</button></div>`})
-html+="</div>"; document.getElementById("market").innerHTML=html;
-}
-function restaurantsPage(){let r=JSON.parse(localStorage.restaurants); let html='<div class="grid">'; r.forEach(x=>{html+=`<div class="card"><h3>${x.name}</h3><button onclick="restaurantPage(${x.id})">View Menu</button></div>`}); html+="</div>"; document.getElementById("market").innerHTML=html;}
-function restaurantPage(id){let menu=JSON.parse(localStorage.menu); let html="<h3>Menu</h3><div class='grid'>"; menu.filter(m=>m.restaurant==id).forEach(m=>{html+=`<div class="card"><b>${m.name}</b><p>$${m.price}</p><button onclick="addCart('${m.name}',${m.price})">Order</button></div>`}); html+="</div>"; document.getElementById("market").innerHTML=html;}
-function busPage(){let trips=JSON.parse(localStorage.trips); let html=""; trips.forEach((t,i)=>{html+=`<div class="card"><h3>${t.route}</h3><p>$${t.price}</p><button onclick="seatSelect()">Select Seat</button></div>`}); document.getElementById("market").innerHTML=html;}
-function seatSelect(){let html="<h3>Select Seat</h3>"; for(let i=1;i<=16;i++){html+=`<button onclick="alert('Seat booked')">${i}</button> `} document.getElementById("market").innerHTML=html;}
-function shipping(){document.getElementById("market").innerHTML=`<h3>Create Shipment</h3><input id="sender" placeholder="Sender"><input id="receiver" placeholder="Receiver"><button onclick="createShipment()">Create Shipment</button>`;}
-function trackNum(){return "NC-"+Math.floor(Math.random()*99999);}
-function createShipment(){let s=JSON.parse(localStorage.shipments); let track=trackNum(); s.push({track:track,status:"Created"}); localStorage.shipments=JSON.stringify(s); notify("Shipment "+track+" created"); alert("Shipment created "+track);}
-function tracking(){let s=JSON.parse(localStorage.shipments); let html="<h2>Tracking</h2>"; s.forEach(x=>{html+=`<div class="card"><b>${x.track}</b><div class="timeline"><div class="step">✔ Created</div><div class="step">✔ Picked Up</div><div class="step">⬜ Border</div><div class="step">⬜ Kampala</div><div class="step">⬜ Delivered</div></div></div>`}); app.innerHTML=html;}
-function addCart(name,price){let c=JSON.parse(localStorage.cart); c.push({name,price}); localStorage.cart=JSON.stringify(c); drawCart();}
-function drawCart(){let c=JSON.parse(localStorage.cart); let html="<b>Cart</b><br>"; let total=0; c.forEach(i=>{html+=i.name+" $"+i.price+"<br>"; total+=i.price}); html+="<br>Total $"+total; html+="<br><button onclick='checkout()'>Checkout</button>"; cart.innerHTML=html;}
-function checkout(){let c=JSON.parse(localStorage.cart); let o=JSON.parse(localStorage.orders); c.forEach(i=>o.push({item:i.name,status:"New"})); localStorage.orders=JSON.stringify(o); localStorage.cart="[]"; notify("New order placed"); drawCart();}
-
-/* ====== Admin Dashboard Sample ====== */
-function admin(){let orders=JSON.parse(localStorage.orders); app.innerHTML=`<h2>Admin Dashboard</h2><canvas id="chart"></canvas><h3>Logistics Map</h3><div id="map"><div class="dot" style="top:40%;left:15%"></div><div class="dot" style="top:35%;left:35%"></div><div class="dot" style="top:33%;left:55%"></div><div class="dot" style="top:30%;left:75%"></div></div>`; let ctx=document.getElementById("chart"); new Chart(ctx,{type:"bar",data:{labels:["Orders"],datasets:[{label:"Orders",data:[orders.length]}]}});}
-
-/* ====== Render ====== */
-function render(){let s=JSON.parse(localStorage.session||"null"); if(!s){app.innerHTML=`<h2>Login</h2><input id="email" placeholder="email"><input id="password" type="password" placeholder="password"><button onclick="login()">Login</button>`; return} user.innerHTML=s.role+" <button onclick='logout()'>Logout</button>"; if(s.role=="customer") marketplace(); if(s.role=="admin") admin(); drawCart();}
-render()
-</script>
-</body>
 </html>
-"""
-
-Path("nilecart_v15.html").write_text(html)
-print("NileCart v15 generated: nilecart_v15.html")
